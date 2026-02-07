@@ -1,0 +1,311 @@
+"use client";
+
+import { useState, useRef } from "react";
+import { Upload, Music, X, Image as ImageIcon } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+
+const AI_TOOLS = [
+  "Midjourney",
+  "niji・journey",
+  "Stable Diffusion",
+  "NovelAI",
+  "DALL-E",
+  "その他",
+];
+
+const PRESET_TAGS = {
+  feature: ["猫耳", "犬耳", "うさ耳", "角", "翼", "尻尾", "メガネ", "帽子"],
+  emotion: ["笑顔", "泣き顔", "怒り", "驚き", "無表情", "照れ"],
+  world: ["ファンタジー", "現代", "SF", "和風", "スチームパンク", "メルヘン"],
+};
+
+export default function UploadPage() {
+  const [name, setName] = useState("");
+  const [shortWorldview, setShortWorldview] = useState("");
+  const [aiTool, setAiTool] = useState("");
+  const [promptSummary, setPromptSummary] = useState("");
+  const [sunoUrl, setSunoUrl] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    try {
+      const supabase = createClient();
+
+      // 認証確認
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push("/login");
+        return;
+      }
+
+      // TODO: 画像アップロード（Supabase Storage or R2）
+      // 仮のURL
+      const imageUrl = imagePreview || "";
+
+      // キャラクター登録
+      const { data: character, error: charError } = await supabase
+        .from("characters")
+        .insert({
+          user_id: user.id,
+          name,
+          short_worldview: shortWorldview,
+          ai_tool_used: aiTool,
+          has_music: !!sunoUrl,
+          status: "pending",
+        })
+        .select()
+        .single();
+
+      if (charError) throw charError;
+
+      // アセット登録
+      const { error: assetError } = await supabase
+        .from("assets")
+        .insert({
+          character_id: character.id,
+          type: "image",
+          original_url: imageUrl,
+          prompt_summary: promptSummary,
+        });
+
+      if (assetError) throw assetError;
+
+      // 音楽登録（あれば）
+      if (sunoUrl) {
+        const { error: musicError } = await supabase
+          .from("music")
+          .insert({
+            character_id: character.id,
+            platform: "suno",
+            embed_url: sunoUrl,
+          });
+
+        if (musicError) throw musicError;
+      }
+
+      // 成功
+      router.push("/");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "エラーが発生しました");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-8">
+      <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-8">
+        キャラクター投稿
+      </h1>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* 画像アップロード */}
+        <div>
+          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+            画像 *
+          </label>
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            className="relative border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-xl p-8 text-center cursor-pointer hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors"
+          >
+            {imagePreview ? (
+              <div className="relative">
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className="max-h-64 mx-auto rounded-lg"
+                />
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setImagePreview(null);
+                    setImageFile(null);
+                  }}
+                  className="absolute top-2 right-2 p-1 bg-zinc-900/80 rounded-full text-white"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            ) : (
+              <div className="text-zinc-500">
+                <ImageIcon size={48} className="mx-auto mb-2 opacity-50" />
+                <p>クリックして画像を選択</p>
+                <p className="text-sm mt-1">PNG, JPG, GIF, WebP</p>
+              </div>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              className="hidden"
+            />
+          </div>
+        </div>
+
+        {/* キャラ名 */}
+        <div>
+          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+            キャラクター名 *
+          </label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="例: 星空の魔法使い"
+            className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-zinc-500 outline-none"
+            required
+          />
+        </div>
+
+        {/* 世界観 */}
+        <div>
+          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+            世界観（40〜80字）
+          </label>
+          <textarea
+            value={shortWorldview}
+            onChange={(e) => setShortWorldview(e.target.value)}
+            placeholder="このキャラの世界観を短く説明"
+            rows={2}
+            maxLength={80}
+            className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-zinc-500 outline-none resize-none"
+          />
+          <p className="text-xs text-zinc-500 mt-1">{shortWorldview.length}/80</p>
+        </div>
+
+        {/* AIツール */}
+        <div>
+          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+            使用AIツール *
+          </label>
+          <select
+            value={aiTool}
+            onChange={(e) => setAiTool(e.target.value)}
+            className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-zinc-500 outline-none"
+            required
+          >
+            <option value="">選択してください</option>
+            {AI_TOOLS.map((tool) => (
+              <option key={tool} value={tool}>
+                {tool}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* プロンプト要約 */}
+        <div>
+          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+            プロンプト要約
+          </label>
+          <textarea
+            value={promptSummary}
+            onChange={(e) => setPromptSummary(e.target.value)}
+            placeholder="生成に使用したプロンプトの要約（著作権物の固有名詞は除く）"
+            rows={3}
+            className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-zinc-500 outline-none resize-none"
+          />
+        </div>
+
+        {/* タグ */}
+        <div>
+          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+            タグ
+          </label>
+          <div className="space-y-3">
+            {Object.entries(PRESET_TAGS).map(([category, tags]) => (
+              <div key={category}>
+                <p className="text-xs text-zinc-500 mb-1">
+                  {category === "feature" ? "外見" : category === "emotion" ? "感情" : "世界観"}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {tags.map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => toggleTag(tag)}
+                      className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                        selectedTags.includes(tag)
+                          ? "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900"
+                          : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                      }`}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Suno URL */}
+        <div>
+          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+            <Music size={16} className="inline mr-1" />
+            Suno曲URL（推奨）
+          </label>
+          <input
+            type="url"
+            value={sunoUrl}
+            onChange={(e) => setSunoUrl(e.target.value)}
+            placeholder="https://suno.com/song/..."
+            className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-zinc-500 outline-none"
+          />
+          <p className="text-xs text-zinc-500 mt-1">
+            本人アカウントの曲のみ使用可能です
+          </p>
+        </div>
+
+        {error && (
+          <p className="text-red-500 text-sm">{error}</p>
+        )}
+
+        {/* 送信 */}
+        <button
+          type="submit"
+          disabled={loading || !imageFile || !name || !aiTool}
+          className="w-full py-3 px-4 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          <Upload size={18} />
+          {loading ? "投稿中..." : "投稿する"}
+        </button>
+
+        <p className="text-xs text-zinc-500 text-center">
+          投稿は承認制です。ガイドラインに沿った内容のみ公開されます。
+        </p>
+      </form>
+    </div>
+  );
+}
