@@ -89,7 +89,7 @@ export default function CharacterDetailPage() {
   const promptSummary = character.assets[0]?.prompt_summary;
   const sunoUrl = character.music[0]?.embed_url;
   const trackId = sunoUrl ? extractSunoTrackId(sunoUrl) : null;
-  const embedUrl = trackId ? `https://suno.com/embed/${trackId}` : null;
+  const embedUrl = trackId ? `https://suno.com/embed/${trackId}?autoplay=1` : null;
   const isCurrentlyPlaying = trackId && state.currentTrackId === trackId && state.isPlaying;
 
   const handlePlayClick = () => {

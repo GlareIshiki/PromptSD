@@ -42,7 +42,7 @@ export function CharacterCard({
 
   // sunoTrackId があればそれを使う、なければURLから抽出を試みる
   const trackId = sunoTrackId || (sunoUrl ? extractSunoTrackId(sunoUrl) : null);
-  const embedUrl = trackId ? `https://suno.com/embed/${trackId}` : null;
+  const embedUrl = trackId ? `https://suno.com/embed/${trackId}?autoplay=1` : null;
 
   // このカードが現在再生中かどうか
   const isCurrentlyPlaying = state.currentTrackId === trackId && state.isPlaying;
