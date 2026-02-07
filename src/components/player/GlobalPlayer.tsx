@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback, ReactNode } from "react";
-import { X, Pause, Play } from "lucide-react";
+import { X, Play } from "lucide-react";
 
 // 動きの強度モード
 export type MotionMode = "calm" | "lively";
@@ -84,15 +84,23 @@ export function usePlayer() {
 
 // 固定フッタープレーヤー
 function FixedPlayer() {
-  const { state, stop } = usePlayer();
-  const { currentTrack } = state;
+  const { state, stop, play } = usePlayer();
+  const { currentTrack, isPlaying } = state;
 
   if (!currentTrack) return null;
 
   const embedUrl = `https://suno.com/embed/${currentTrack.trackId}?autoplay=1`;
 
+  const handlePlayPause = () => {
+    if (isPlaying) {
+      // 一時停止はstopで実装（iframeを消す）
+    } else {
+      play(currentTrack);
+    }
+  };
+
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-zinc-900 border-t border-zinc-800">
+    <div className="fixed bottom-4 left-4 right-4 z-50 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl overflow-hidden">
       <div className="flex items-center">
         {/* サムネイル */}
         {currentTrack.imageUrl && (
@@ -103,16 +111,28 @@ function FixedPlayer() {
           />
         )}
 
-        {/* Sunoプレーヤー（iframe） */}
+        {/* Sunoプレーヤー（iframe）- 再生中のみ表示 */}
         <div className="flex-1 h-20 overflow-hidden">
-          <iframe
-            src={embedUrl}
-            width="100%"
-            height="80"
-            frameBorder="0"
-            allow="autoplay; clipboard-write; encrypted-media"
-            loading="lazy"
-          />
+          {isPlaying ? (
+            <iframe
+              src={embedUrl}
+              width="100%"
+              height="80"
+              frameBorder="0"
+              allow="autoplay; clipboard-write; encrypted-media"
+              loading="lazy"
+            />
+          ) : (
+            <div className="h-full flex items-center justify-center">
+              <button
+                onClick={() => play(currentTrack)}
+                className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-full hover:bg-amber-600 transition-colors"
+              >
+                <Play size={20} />
+                <span className="font-medium">{currentTrack.name}</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* 閉じるボタン */}
