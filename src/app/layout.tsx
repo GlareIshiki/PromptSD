@@ -31,7 +31,7 @@ export default function RootLayout({
       >
         <PlayerProvider>
           <Header />
-          <main className="min-h-screen pt-16 pb-28">
+          <main className="min-h-screen pt-16 pb-32">
             {children}
           </main>
         </PlayerProvider>
