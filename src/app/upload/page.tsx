@@ -147,12 +147,29 @@ export default function UploadPage() {
 
       // 音楽登録（あれば）
       if (sunoUrl) {
+        // 短縮URLを解決して実際の曲IDを取得
+        let resolvedSongId: string | null = null;
+        try {
+          const resolveRes = await fetch("/api/suno/resolve", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url: sunoUrl }),
+          });
+          if (resolveRes.ok) {
+            const { songId } = await resolveRes.json();
+            resolvedSongId = songId;
+          }
+        } catch (e) {
+          console.error("Failed to resolve Suno URL:", e);
+        }
+
         const { error: musicError } = await supabase
           .from("music")
           .insert({
             character_id: character.id,
             platform: "suno",
             embed_url: sunoUrl,
+            suno_track_id: resolvedSongId,
           });
 
         if (musicError) throw musicError;

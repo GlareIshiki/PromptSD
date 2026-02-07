@@ -14,6 +14,7 @@ interface CharacterCardProps {
   tags?: string[];
   shortWorldview?: string;
   sunoUrl?: string;
+  sunoTrackId?: string | null;
   status?: string;
 }
 
@@ -33,12 +34,14 @@ export function CharacterCard({
   tags = [],
   shortWorldview,
   sunoUrl,
+  sunoTrackId,
   status = "public",
 }: CharacterCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const { state, play, stop } = usePlayer();
 
-  const trackId = sunoUrl ? extractSunoTrackId(sunoUrl) : null;
+  // sunoTrackId があればそれを使う、なければURLから抽出を試みる
+  const trackId = sunoTrackId || (sunoUrl ? extractSunoTrackId(sunoUrl) : null);
   const embedUrl = trackId ? `https://suno.com/embed/${trackId}` : null;
 
   // このカードが現在再生中かどうか

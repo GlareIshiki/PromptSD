@@ -58,6 +58,7 @@ export function GalleryGrid({ filterMusic, includeAll = false }: GalleryGridProp
           verifiedOwner={character.music[0]?.verified_owner || false}
           shortWorldview={character.short_worldview || undefined}
           sunoUrl={character.music[0]?.embed_url}
+          sunoTrackId={character.music[0]?.suno_track_id}
           tags={character.character_tags?.map((ct) => ct.tags.name) || []}
           status={character.status}
         />

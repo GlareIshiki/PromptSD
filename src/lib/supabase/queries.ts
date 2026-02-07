@@ -21,6 +21,7 @@ export interface CharacterWithAssets {
     embed_url: string;
     verified_owner: boolean;
     title: string | null;
+    suno_track_id: string | null;
   }[];
   character_tags: {
     tags: {
@@ -63,7 +64,8 @@ export async function getPublicCharacters(options?: {
         platform,
         embed_url,
         verified_owner,
-        title
+        title,
+        suno_track_id
       ),
       character_tags (
         tags (
@@ -125,7 +127,8 @@ export async function getCharacterById(id: string): Promise<CharacterWithAssets 
         platform,
         embed_url,
         verified_owner,
-        title
+        title,
+        suno_track_id
       ),
       character_tags (
         tags (
