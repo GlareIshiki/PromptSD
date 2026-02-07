@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { Upload, Music, X, Image as ImageIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { uploadImage } from "@/lib/supabase/storage";
+import { createPreview } from "@/lib/imageUtils";
 import { useRouter } from "next/navigation";
 
 const AI_TOOLS = [
@@ -35,15 +36,22 @@ export default function UploadPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setImageFile(file);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setImagePreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
+      // 1:1クロップしたプレビューを生成
+      try {
+        const preview = await createPreview(file, 400);
+        setImagePreview(preview);
+      } catch {
+        // フォールバック
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setImagePreview(e.target?.result as string);
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 
