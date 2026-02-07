@@ -84,62 +84,44 @@ export function usePlayer() {
 
 // 固定フッタープレーヤー
 function FixedPlayer() {
-  const { state, pause, play, stop } = usePlayer();
+  const { state, stop } = usePlayer();
   const { currentTrack, isPlaying } = state;
 
-  if (!currentTrack) return null;
+  if (!currentTrack || !isPlaying) return null;
 
   const embedUrl = `https://suno.com/embed/${currentTrack.trackId}?autoplay=1`;
 
-  const handlePlayPause = () => {
-    if (isPlaying) {
-      pause();
-    } else {
-      play(currentTrack);
-    }
-  };
-
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-zinc-900 border-t border-zinc-800 shadow-lg">
-      <div className="max-w-7xl mx-auto px-4 py-2 flex items-center gap-4">
+    <div className="fixed bottom-0 left-0 right-0 z-50 bg-zinc-900 border-t border-zinc-800">
+      <div className="flex items-center">
         {/* サムネイル */}
         {currentTrack.imageUrl && (
           <img
             src={currentTrack.imageUrl}
             alt={currentTrack.name}
-            className="w-12 h-12 rounded-lg object-cover"
+            className="w-20 h-20 object-cover flex-shrink-0"
           />
         )}
 
-        {/* 曲名 */}
-        <div className="flex-shrink-0 min-w-0">
-          <p className="text-white font-medium truncate max-w-[150px]">
-            {currentTrack.name}
-          </p>
-        </div>
-
         {/* Sunoプレーヤー（iframe） */}
-        <div className="flex-1 max-w-xl">
-          {isPlaying && (
-            <iframe
-              src={embedUrl}
-              width="100%"
-              height="80"
-              frameBorder="0"
-              allow="autoplay; clipboard-write; encrypted-media"
-              loading="lazy"
-              className="rounded-lg"
-            />
-          )}
+        <div className="flex-1 h-20 overflow-hidden">
+          <iframe
+            src={embedUrl}
+            width="100%"
+            height="80"
+            frameBorder="0"
+            allow="autoplay; clipboard-write; encrypted-media"
+            loading="lazy"
+          />
         </div>
 
         {/* 閉じるボタン */}
         <button
           onClick={stop}
-          className="p-2 text-zinc-400 hover:text-white transition-colors"
+          className="p-4 text-zinc-400 hover:text-white transition-colors flex-shrink-0"
           title="閉じる"
         >
-          <X size={20} />
+          <X size={24} />
         </button>
       </div>
     </div>
