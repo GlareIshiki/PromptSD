@@ -1,19 +1,17 @@
 import { createClient } from "./client";
-import { cropAndResizeImage } from "@/lib/imageUtils";
 
-export async function uploadImage(file: File, userId: string): Promise<string | null> {
+/**
+ * Blobをアップロード（クロップ済み画像用）
+ */
+export async function uploadImageBlob(blob: Blob, userId: string): Promise<string | null> {
   const supabase = createClient();
 
   try {
-    // 画像を1:1にクロップ＆リサイズ（800x800 WebP）
-    const resizedBlob = await cropAndResizeImage(file, 800);
-
-    // ファイル名をユニークに（WebP形式）
     const fileName = `${userId}/${Date.now()}.webp`;
 
     const { data, error } = await supabase.storage
       .from('images')
-      .upload(fileName, resizedBlob, {
+      .upload(fileName, blob, {
         cacheControl: '3600',
         upsert: false,
         contentType: 'image/webp',
@@ -31,7 +29,7 @@ export async function uploadImage(file: File, userId: string): Promise<string | 
 
     return publicUrl;
   } catch (err) {
-    console.error('Image processing error:', err);
+    console.error('Upload error:', err);
     return null;
   }
 }

@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Upload, Music, X, Image as ImageIcon } from "lucide-react";
+import { Upload, Music, X, Image as ImageIcon, Crop } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { uploadImage } from "@/lib/supabase/storage";
-import { createPreview } from "@/lib/imageUtils";
+import { uploadImageBlob } from "@/lib/supabase/storage";
+import { ImageCropper } from "@/components/upload/ImageCropper";
 import { useRouter } from "next/navigation";
 
 const AI_TOOLS = [
@@ -29,30 +29,51 @@ export default function UploadPage() {
   const [promptSummary, setPromptSummary] = useState("");
   const [sunoUrl, setSunoUrl] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+
+  // 画像関連
+  const [originalImageSrc, setOriginalImageSrc] = useState<string | null>(null);
+  const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null);
+  const [croppedPreview, setCroppedPreview] = useState<string | null>(null);
+  const [showCropper, setShowCropper] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setImageFile(file);
-      // 1:1クロップしたプレビューを生成
-      try {
-        const preview = await createPreview(file, 400);
-        setImagePreview(preview);
-      } catch {
-        // フォールバック
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          setImagePreview(e.target?.result as string);
-        };
-        reader.readAsDataURL(file);
-      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setOriginalImageSrc(e.target?.result as string);
+        setShowCropper(true);
+      };
+      reader.readAsDataURL(file);
     }
+  };
+
+  const handleCropComplete = (blob: Blob) => {
+    setCroppedBlob(blob);
+    setCroppedPreview(URL.createObjectURL(blob));
+    setShowCropper(false);
+  };
+
+  const handleCropCancel = () => {
+    setShowCropper(false);
+    setOriginalImageSrc(null);
+  };
+
+  const handleEditCrop = () => {
+    if (originalImageSrc) {
+      setShowCropper(true);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setOriginalImageSrc(null);
+    setCroppedBlob(null);
+    setCroppedPreview(null);
   };
 
   const toggleTag = (tag: string) => {
@@ -77,11 +98,11 @@ export default function UploadPage() {
       }
 
       // 画像アップロード
-      if (!imageFile) {
+      if (!croppedBlob) {
         throw new Error("画像を選択してください");
       }
 
-      const imageUrl = await uploadImage(imageFile, user.id);
+      const imageUrl = await uploadImageBlob(croppedBlob, user.id);
       if (!imageUrl) {
         throw new Error("画像のアップロードに失敗しました");
       }
@@ -149,27 +170,40 @@ export default function UploadPage() {
             画像 *
           </label>
           <div
-            onClick={() => fileInputRef.current?.click()}
-            className="relative border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-xl p-8 text-center cursor-pointer hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors"
+            onClick={() => !croppedPreview && fileInputRef.current?.click()}
+            className={`relative border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-xl p-8 text-center transition-colors ${!croppedPreview ? 'cursor-pointer hover:border-zinc-400 dark:hover:border-zinc-600' : ''}`}
           >
-            {imagePreview ? (
-              <div className="relative">
+            {croppedPreview ? (
+              <div className="relative inline-block">
                 <img
-                  src={imagePreview}
+                  src={croppedPreview}
                   alt="Preview"
                   className="max-h-64 mx-auto rounded-lg"
                 />
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setImagePreview(null);
-                    setImageFile(null);
-                  }}
-                  className="absolute top-2 right-2 p-1 bg-zinc-900/80 rounded-full text-white"
-                >
-                  <X size={16} />
-                </button>
+                <div className="absolute top-2 right-2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEditCrop();
+                    }}
+                    className="p-1.5 bg-zinc-900/80 rounded-full text-white hover:bg-zinc-900 transition-colors"
+                    title="再調整"
+                  >
+                    <Crop size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemoveImage();
+                    }}
+                    className="p-1.5 bg-zinc-900/80 rounded-full text-white hover:bg-zinc-900 transition-colors"
+                    title="削除"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="text-zinc-500">
@@ -182,7 +216,7 @@ export default function UploadPage() {
               ref={fileInputRef}
               type="file"
               accept="image/*"
-              onChange={handleImageChange}
+              onChange={handleImageSelect}
               className="hidden"
             />
           </div>
@@ -310,7 +344,7 @@ export default function UploadPage() {
         {/* 送信 */}
         <button
           type="submit"
-          disabled={loading || !imageFile || !name || !aiTool}
+          disabled={loading || !croppedBlob || !name || !aiTool}
           className="w-full py-3 px-4 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
         >
           <Upload size={18} />
@@ -321,6 +355,15 @@ export default function UploadPage() {
           投稿は承認制です。ガイドラインに沿った内容のみ公開されます。
         </p>
       </form>
+
+      {/* Image Cropper Modal */}
+      {showCropper && originalImageSrc && (
+        <ImageCropper
+          imageSrc={originalImageSrc}
+          onCropComplete={handleCropComplete}
+          onCancel={handleCropCancel}
+        />
+      )}
     </div>
   );
 }
