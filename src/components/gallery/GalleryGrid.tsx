@@ -6,21 +6,22 @@ import { getPublicCharacters, CharacterWithAssets } from "@/lib/supabase/queries
 
 interface GalleryGridProps {
   filterMusic?: boolean;
+  includeAll?: boolean; // 新着タブ：statusに関わらず全件
 }
 
-export function GalleryGrid({ filterMusic }: GalleryGridProps) {
+export function GalleryGrid({ filterMusic, includeAll = false }: GalleryGridProps) {
   const [characters, setCharacters] = useState<CharacterWithAssets[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchCharacters() {
       setLoading(true);
-      const data = await getPublicCharacters({ hasMusic: filterMusic });
+      const data = await getPublicCharacters({ hasMusic: filterMusic, includeAll });
       setCharacters(data);
       setLoading(false);
     }
     fetchCharacters();
-  }, [filterMusic]);
+  }, [filterMusic, includeAll]);
 
   if (loading) {
     return (
@@ -57,6 +58,8 @@ export function GalleryGrid({ filterMusic }: GalleryGridProps) {
           verifiedOwner={character.music[0]?.verified_owner || false}
           shortWorldview={character.short_worldview || undefined}
           sunoUrl={character.music[0]?.embed_url}
+          tags={character.character_tags?.map((ct) => ct.tags.name) || []}
+          status={character.status}
         />
       ))}
     </div>

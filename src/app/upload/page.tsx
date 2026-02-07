@@ -16,11 +16,21 @@ const AI_TOOLS = [
   "その他",
 ];
 
-const PRESET_TAGS = {
-  feature: ["猫耳", "犬耳", "うさ耳", "角", "翼", "尻尾", "メガネ", "帽子"],
-  emotion: ["笑顔", "泣き顔", "怒り", "驚き", "無表情", "照れ"],
-  world: ["ファンタジー", "現代", "SF", "和風", "スチームパンク", "メルヘン"],
+const PRESET_TAGS: Record<string, { type: "feature" | "emotion" | "world"; tags: string[] }> = {
+  feature: { type: "feature", tags: ["猫耳", "犬耳", "うさ耳", "角", "翼", "尻尾", "メガネ", "帽子"] },
+  emotion: { type: "emotion", tags: ["笑顔", "泣き顔", "怒り", "驚き", "無表情", "照れ"] },
+  world: { type: "world", tags: ["ファンタジー", "現代", "SF", "和風", "スチームパンク", "メルヘン"] },
 };
+
+// タグ名からタイプを取得
+function getTagType(tagName: string): "feature" | "emotion" | "world" {
+  for (const category of Object.values(PRESET_TAGS)) {
+    if (category.tags.includes(tagName)) {
+      return category.type;
+    }
+  }
+  return "feature"; // デフォルト
+}
 
 export default function UploadPage() {
   const [name, setName] = useState("");
@@ -146,6 +156,47 @@ export default function UploadPage() {
           });
 
         if (musicError) throw musicError;
+      }
+
+      // タグ登録
+      if (selectedTags.length > 0) {
+        // まず既存タグを取得、なければ作成
+        for (const tagName of selectedTags) {
+          const tagType = getTagType(tagName);
+
+          // タグを取得または作成
+          let tagId: string;
+          const { data: existingTag } = await supabase
+            .from("tags")
+            .select("id")
+            .eq("name", tagName)
+            .single();
+
+          if (existingTag) {
+            tagId = existingTag.id;
+          } else {
+            const { data: newTag, error: tagError } = await supabase
+              .from("tags")
+              .insert({ name: tagName, type: tagType })
+              .select("id")
+              .single();
+
+            if (tagError) {
+              console.error("Tag creation error:", tagError);
+              continue;
+            }
+            tagId = newTag.id;
+          }
+
+          // character_tagsに紐付け
+          await supabase
+            .from("character_tags")
+            .insert({
+              character_id: character.id,
+              tag_id: tagId,
+              auto_generated: false,
+            });
+        }
       }
 
       // 成功
@@ -293,7 +344,7 @@ export default function UploadPage() {
             タグ
           </label>
           <div className="space-y-3">
-            {Object.entries(PRESET_TAGS).map(([category, tags]) => (
+            {Object.entries(PRESET_TAGS).map(([category, { tags }]) => (
               <div key={category}>
                 <p className="text-xs text-zinc-500 mb-1">
                   {category === "feature" ? "外見" : category === "emotion" ? "感情" : "世界観"}

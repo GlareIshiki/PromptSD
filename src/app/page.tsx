@@ -4,17 +4,21 @@ import { useState } from "react";
 import { GalleryGrid } from "@/components/gallery/GalleryGrid";
 import { Music, Image, Calendar } from "lucide-react";
 import clsx from "clsx";
+import { usePlayer } from "@/components/player/GlobalPlayer";
 
-type Tab = "music" | "nomusic" | "all";
+type Tab = "music" | "nomusic" | "new";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>("music");
+  const { state, setMotionMode } = usePlayer();
 
   const getFilterMusic = () => {
     if (activeTab === "music") return true;
     if (activeTab === "nomusic") return false;
-    return undefined;
+    return undefined; // 新着タブはhas_musicフィルタなし
   };
+
+  const isNewTab = activeTab === "new";
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -30,8 +34,9 @@ export default function Home() {
         </p>
       </section>
 
-      {/* Tabs */}
-      <div className="flex justify-center mb-8">
+      {/* Tabs + Motion Toggle */}
+      <div className="flex justify-between items-center mb-8">
+        <div /> {/* Spacer */}
         <div className="inline-flex items-center gap-1 p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl">
           <TabButton
             active={activeTab === "music"}
@@ -46,16 +51,32 @@ export default function Home() {
             label="音楽なし"
           />
           <TabButton
-            active={activeTab === "all"}
-            onClick={() => setActiveTab("all")}
+            active={activeTab === "new"}
+            onClick={() => setActiveTab("new")}
             icon={<Calendar size={16} />}
-            label="すべて"
+            label="新着"
+          />
+        </div>
+
+        {/* Motion Toggle */}
+        <div className="flex items-center gap-1 p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl">
+          <MotionButton
+            active={state.motionMode === "calm"}
+            onClick={() => setMotionMode("calm")}
+            icon="🍂"
+            label="静か"
+          />
+          <MotionButton
+            active={state.motionMode === "lively"}
+            onClick={() => setMotionMode("lively")}
+            icon="🎉"
+            label="賑やか"
           />
         </div>
       </div>
 
       {/* Gallery */}
-      <GalleryGrid filterMusic={getFilterMusic()} />
+      <GalleryGrid filterMusic={getFilterMusic()} includeAll={isNewTab} />
     </div>
   );
 }
@@ -83,6 +104,34 @@ function TabButton({
     >
       {icon}
       <span>{label}</span>
+    </button>
+  );
+}
+
+function MotionButton({
+  active,
+  onClick,
+  icon,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: string;
+  label: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={clsx(
+        "flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors text-sm",
+        active
+          ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-sm"
+          : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+      )}
+      title={label}
+    >
+      <span>{icon}</span>
+      <span className="hidden sm:inline">{label}</span>
     </button>
   );
 }

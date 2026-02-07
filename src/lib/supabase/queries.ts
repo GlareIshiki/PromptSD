@@ -22,15 +22,24 @@ export interface CharacterWithAssets {
     verified_owner: boolean;
     title: string | null;
   }[];
+  character_tags: {
+    tags: {
+      id: string;
+      name: string;
+      type: string;
+      color: string | null;
+    };
+  }[];
 }
 
 export async function getPublicCharacters(options?: {
   hasMusic?: boolean;
   limit?: number;
   offset?: number;
+  includeAll?: boolean; // 新着タブ用：statusに関わらず全件取得
 }): Promise<CharacterWithAssets[]> {
   const supabase = createClient();
-  const { hasMusic, limit = 50, offset = 0 } = options || {};
+  const { hasMusic, limit = 50, offset = 0, includeAll = false } = options || {};
 
   let query = supabase
     .from("characters")
@@ -55,11 +64,23 @@ export async function getPublicCharacters(options?: {
         embed_url,
         verified_owner,
         title
+      ),
+      character_tags (
+        tags (
+          id,
+          name,
+          type,
+          color
+        )
       )
     `)
-    .eq("status", "public")
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
+
+  // 新着タブ以外は承認済みのみ
+  if (!includeAll) {
+    query = query.eq("status", "public");
+  }
 
   if (hasMusic !== undefined) {
     query = query.eq("has_music", hasMusic);
@@ -72,7 +93,7 @@ export async function getPublicCharacters(options?: {
     return [];
   }
 
-  return data as CharacterWithAssets[];
+  return data as unknown as CharacterWithAssets[];
 }
 
 export async function getCharacterById(id: string): Promise<CharacterWithAssets | null> {
@@ -101,6 +122,14 @@ export async function getCharacterById(id: string): Promise<CharacterWithAssets 
         embed_url,
         verified_owner,
         title
+      ),
+      character_tags (
+        tags (
+          id,
+          name,
+          type,
+          color
+        )
       )
     `)
     .eq("id", id)
@@ -111,5 +140,5 @@ export async function getCharacterById(id: string): Promise<CharacterWithAssets 
     return null;
   }
 
-  return data as CharacterWithAssets;
+  return data as unknown as CharacterWithAssets;
 }

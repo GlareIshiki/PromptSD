@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Play, Pause, Download, Share2, Music } from "lucide-react";
 import clsx from "clsx";
+import { usePlayer } from "@/components/player/GlobalPlayer";
 
 interface CharacterCardProps {
   id: string;
@@ -13,6 +14,7 @@ interface CharacterCardProps {
   tags?: string[];
   shortWorldview?: string;
   sunoUrl?: string;
+  status?: string;
 }
 
 // Suno URLからトラックIDを抽出
@@ -30,21 +32,76 @@ export function CharacterCard({
   tags = [],
   shortWorldview,
   sunoUrl,
+  status = "public",
 }: CharacterCardProps) {
-  const [isPlaying, setIsPlaying] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const { state, play, stop } = usePlayer();
 
   const trackId = sunoUrl ? extractSunoTrackId(sunoUrl) : null;
   const embedUrl = trackId ? `https://suno.com/embed/${trackId}` : null;
 
-  const handlePlayClick = () => {
-    setIsPlaying(!isPlaying);
+  // このカードが現在再生中かどうか
+  const isCurrentlyPlaying = state.currentTrackId === trackId && state.isPlaying;
+  const isCalm = state.motionMode === "calm";
+
+  const handlePlayClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!trackId) return;
+
+    if (isCurrentlyPlaying) {
+      // 再生中なら停止
+      stop();
+    } else {
+      // 他のトラックを停止してこのトラックを再生
+      play(trackId);
+    }
+  };
+
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!imageUrl) return;
+    try {
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${name || "character"}.webp`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Download failed:", err);
+    }
+  };
+
+  const handleShare = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const shareUrl = `${window.location.origin}/character/${id}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: name,
+          text: shortWorldview || `${name} - PromptSD`,
+          url: shareUrl,
+        });
+      } catch {
+        // ユーザーがキャンセルした場合など
+      }
+    } else {
+      // フォールバック: クリップボードにコピー
+      await navigator.clipboard.writeText(shareUrl);
+      alert("URLをコピーしました");
+    }
   };
 
   return (
     <div
-      className="group relative bg-white dark:bg-zinc-900 rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300"
+      className={clsx(
+        "group relative bg-white dark:bg-zinc-900 rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300",
+        isCurrentlyPlaying && "ring-2 ring-amber-500 shadow-amber-500/20"
+      )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -54,7 +111,11 @@ export function CharacterCard({
           <img
             src={imageUrl}
             alt={name}
-            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            className={clsx(
+              "w-full h-full object-cover transition-transform",
+              isCalm ? "duration-500" : "duration-300",
+              !isCalm && "group-hover:scale-105"
+            )}
           />
         ) : (
           <div className="w-full h-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center">
@@ -68,17 +129,24 @@ export function CharacterCard({
             onClick={handlePlayClick}
             className={clsx(
               "absolute top-3 left-3 p-2 rounded-full transition-all duration-200",
-              isPlaying
-                ? "bg-zinc-900 text-white"
+              isCurrentlyPlaying
+                ? clsx("bg-amber-500 text-white", !isCalm && "animate-pulse")
                 : "bg-white/90 text-zinc-900 hover:bg-white"
             )}
           >
-            {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+            {isCurrentlyPlaying ? <Pause size={16} /> : <Play size={16} />}
           </button>
         )}
 
+        {/* Status Badge (pending) */}
+        {status === "pending" && (
+          <div className="absolute top-3 right-3 px-2 py-1 bg-zinc-500/90 text-white text-xs rounded-full">
+            未承認
+          </div>
+        )}
+
         {/* Verified Owner Badge */}
-        {hasMusic && verifiedOwner && (
+        {status === "public" && hasMusic && verifiedOwner && (
           <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 bg-amber-500/90 text-white text-xs rounded-full">
             <Music size={12} />
             <span>本人曲</span>
@@ -92,20 +160,27 @@ export function CharacterCard({
             isHovered ? "opacity-100" : "opacity-0"
           )}
         >
-          <button className="p-2 bg-white/90 rounded-full hover:bg-white transition-colors">
+          <button
+            onClick={handleDownload}
+            className="p-2 bg-white/90 rounded-full hover:bg-white transition-colors"
+            title="ダウンロード"
+          >
             <Download size={14} className="text-zinc-700" />
           </button>
-          <button className="p-2 bg-white/90 rounded-full hover:bg-white transition-colors">
+          <button
+            onClick={handleShare}
+            className="p-2 bg-white/90 rounded-full hover:bg-white transition-colors"
+            title="シェア"
+          >
             <Share2 size={14} className="text-zinc-700" />
           </button>
         </div>
       </div>
 
       {/* Suno Player - 再生中のみ表示 */}
-      {isPlaying && embedUrl && (
+      {isCurrentlyPlaying && embedUrl && (
         <div className="border-t border-zinc-200 dark:border-zinc-700">
           <iframe
-            ref={iframeRef}
             src={embedUrl}
             width="100%"
             height="100"
