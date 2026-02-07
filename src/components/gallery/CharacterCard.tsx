@@ -42,10 +42,9 @@ export function CharacterCard({
 
   // sunoTrackId があればそれを使う、なければURLから抽出を試みる
   const trackId = sunoTrackId || (sunoUrl ? extractSunoTrackId(sunoUrl) : null);
-  const embedUrl = trackId ? `https://suno.com/embed/${trackId}?autoplay=1` : null;
 
   // このカードが現在再生中かどうか
-  const isCurrentlyPlaying = state.currentTrackId === trackId && state.isPlaying;
+  const isCurrentlyPlaying = state.currentTrack?.trackId === trackId && state.isPlaying;
   const isCalm = state.motionMode === "calm";
 
   const handlePlayClick = (e: React.MouseEvent) => {
@@ -57,7 +56,7 @@ export function CharacterCard({
       stop();
     } else {
       // 他のトラックを停止してこのトラックを再生
-      play(trackId);
+      play({ trackId, name, imageUrl });
     }
   };
 
@@ -128,7 +127,7 @@ export function CharacterCard({
         )}
 
         {/* Play Button Overlay */}
-        {hasMusic && embedUrl && (
+        {hasMusic && trackId && (
           <button
             onClick={handlePlayClick}
             className={clsx(
@@ -180,20 +179,6 @@ export function CharacterCard({
           </button>
         </div>
       </div>
-
-      {/* Suno Player - 再生中のみ表示 */}
-      {isCurrentlyPlaying && embedUrl && (
-        <div className="border-t border-zinc-200 dark:border-zinc-700">
-          <iframe
-            src={embedUrl}
-            width="100%"
-            height="100"
-            frameBorder="0"
-            allow="autoplay; clipboard-write; encrypted-media"
-            loading="lazy"
-          />
-        </div>
-      )}
 
       {/* Info */}
       <div className="p-3">

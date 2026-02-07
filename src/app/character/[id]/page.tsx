@@ -88,16 +88,16 @@ export default function CharacterDetailPage() {
   const imageUrl = character.assets[0]?.original_url;
   const promptSummary = character.assets[0]?.prompt_summary;
   const sunoUrl = character.music[0]?.embed_url;
-  const trackId = sunoUrl ? extractSunoTrackId(sunoUrl) : null;
-  const embedUrl = trackId ? `https://suno.com/embed/${trackId}?autoplay=1` : null;
-  const isCurrentlyPlaying = trackId && state.currentTrackId === trackId && state.isPlaying;
+  const sunoTrackId = character.music[0]?.suno_track_id;
+  const trackId = sunoTrackId || (sunoUrl ? extractSunoTrackId(sunoUrl) : null);
+  const isCurrentlyPlaying = trackId && state.currentTrack?.trackId === trackId && state.isPlaying;
 
   const handlePlayClick = () => {
     if (!trackId) return;
     if (isCurrentlyPlaying) {
       stop();
     } else {
-      play(trackId);
+      play({ trackId, name: character.name, imageUrl: imageUrl || undefined });
     }
   };
 
@@ -237,7 +237,7 @@ export default function CharacterDetailPage() {
           </div>
 
           {/* Music Player */}
-          {character.has_music && embedUrl && (
+          {character.has_music && trackId && (
             <div className="mt-6">
               <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-3">
                 Music
@@ -262,17 +262,6 @@ export default function CharacterDetailPage() {
                     </span>
                   )}
                 </button>
-
-                {isCurrentlyPlaying && (
-                  <iframe
-                    src={embedUrl}
-                    width="100%"
-                    height="150"
-                    frameBorder="0"
-                    allow="autoplay; clipboard-write; encrypted-media"
-                    loading="lazy"
-                  />
-                )}
 
                 {sunoUrl && (
                   <a
