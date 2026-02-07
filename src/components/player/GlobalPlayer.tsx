@@ -100,24 +100,24 @@ function FixedPlayer() {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-zinc-900 border-t border-zinc-800">
-      <div className="flex items-center">
+    <div className="fixed bottom-4 left-4 right-4 z-50 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden">
+      <div className="flex items-center h-24">
         {/* サムネイル */}
         {currentTrack.imageUrl && (
           <img
             src={currentTrack.imageUrl}
             alt={currentTrack.name}
-            className="w-20 h-20 object-cover flex-shrink-0"
+            className="w-24 h-24 object-cover flex-shrink-0"
           />
         )}
 
         {/* Sunoプレーヤー（iframe）- 再生中のみ表示 */}
-        <div className="flex-1 h-20 overflow-hidden">
+        <div className="flex-1 h-24">
           {isPlaying ? (
             <iframe
               src={embedUrl}
               width="100%"
-              height="80"
+              height="96"
               frameBorder="0"
               allow="autoplay; clipboard-write; encrypted-media"
               loading="lazy"
