@@ -38,24 +38,25 @@ export function CharacterCard({
   status = "public",
 }: CharacterCardProps) {
   const [isHovered, setIsHovered] = useState(false);
-  const { state, play, stop } = usePlayer();
+  const { state, play, pause } = usePlayer();
 
   // sunoTrackId があればそれを使う、なければURLから抽出を試みる
   const trackId = sunoTrackId || (sunoUrl ? extractSunoTrackId(sunoUrl) : null);
 
   // このカードが現在プレーヤーに表示されているかどうか
   const isCurrentTrack = state.currentTrack?.trackId === trackId;
+  const isPlaying = isCurrentTrack && state.isPlaying;
   const isCalm = state.motionMode === "calm";
 
   const handlePlayClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!trackId) return;
 
-    if (isCurrentTrack) {
-      // 同じ曲ならプレーヤーを閉じる
-      stop();
+    if (isCurrentTrack && state.isPlaying) {
+      // 同じ曲で再生中なら一時停止
+      pause();
     } else {
-      // 別の曲を再生
+      // 別の曲、または一時停止中なら再生
       play({ trackId, name, imageUrl });
     }
   };
@@ -137,7 +138,7 @@ export function CharacterCard({
                 : "bg-white/90 text-zinc-900 hover:bg-white"
             )}
           >
-            {isCurrentTrack ? <Pause size={16} /> : <Play size={16} />}
+            {isPlaying ? <Pause size={16} /> : <Play size={16} />}
           </button>
         )}
 
