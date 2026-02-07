@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Play, Pause, Download, Share2, Music } from "lucide-react";
 import clsx from "clsx";
 
@@ -12,6 +12,13 @@ interface CharacterCardProps {
   verifiedOwner?: boolean;
   tags?: string[];
   shortWorldview?: string;
+  sunoUrl?: string;
+}
+
+// Suno URLからトラックIDを抽出
+function extractSunoTrackId(url: string): string | null {
+  const match = url.match(/suno\.(com|ai)\/song\/([a-zA-Z0-9-]+)/);
+  return match ? match[2] : null;
 }
 
 export function CharacterCard({
@@ -22,9 +29,18 @@ export function CharacterCard({
   verifiedOwner = false,
   tags = [],
   shortWorldview,
+  sunoUrl,
 }: CharacterCardProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  const trackId = sunoUrl ? extractSunoTrackId(sunoUrl) : null;
+  const embedUrl = trackId ? `https://suno.com/embed/${trackId}` : null;
+
+  const handlePlayClick = () => {
+    setIsPlaying(!isPlaying);
+  };
 
   return (
     <div
@@ -34,16 +50,22 @@ export function CharacterCard({
     >
       {/* Image Container - 正方形 */}
       <div className="relative aspect-square overflow-hidden">
-        <img
-          src={imageUrl}
-          alt={name}
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-        />
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={name}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+        ) : (
+          <div className="w-full h-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center">
+            <span className="text-zinc-400">No Image</span>
+          </div>
+        )}
 
         {/* Play Button Overlay */}
-        {hasMusic && (
+        {hasMusic && embedUrl && (
           <button
-            onClick={() => setIsPlaying(!isPlaying)}
+            onClick={handlePlayClick}
             className={clsx(
               "absolute top-3 left-3 p-2 rounded-full transition-all duration-200",
               isPlaying
@@ -78,6 +100,21 @@ export function CharacterCard({
           </button>
         </div>
       </div>
+
+      {/* Suno Player - 再生中のみ表示 */}
+      {isPlaying && embedUrl && (
+        <div className="border-t border-zinc-200 dark:border-zinc-700">
+          <iframe
+            ref={iframeRef}
+            src={embedUrl}
+            width="100%"
+            height="100"
+            frameBorder="0"
+            allow="autoplay; clipboard-write; encrypted-media"
+            loading="lazy"
+          />
+        </div>
+      )}
 
       {/* Info */}
       <div className="p-3">

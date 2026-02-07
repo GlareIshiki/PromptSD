@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { Upload, Music, X, Image as ImageIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { uploadImage } from "@/lib/supabase/storage";
 import { useRouter } from "next/navigation";
 
 const AI_TOOLS = [
@@ -67,9 +68,15 @@ export default function UploadPage() {
         return;
       }
 
-      // TODO: 画像アップロード（Supabase Storage or R2）
-      // 仮のURL
-      const imageUrl = imagePreview || "";
+      // 画像アップロード
+      if (!imageFile) {
+        throw new Error("画像を選択してください");
+      }
+
+      const imageUrl = await uploadImage(imageFile, user.id);
+      if (!imageUrl) {
+        throw new Error("画像のアップロードに失敗しました");
+      }
 
       // キャラクター登録
       const { data: character, error: charError } = await supabase
