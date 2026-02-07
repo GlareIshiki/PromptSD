@@ -85,9 +85,9 @@ export function usePlayer() {
 // 固定フッタープレーヤー
 function FixedPlayer() {
   const { state, stop } = usePlayer();
-  const { currentTrack, isPlaying } = state;
+  const { currentTrack } = state;
 
-  if (!currentTrack || !isPlaying) return null;
+  if (!currentTrack) return null;
 
   const embedUrl = `https://suno.com/embed/${currentTrack.trackId}?autoplay=1`;
 

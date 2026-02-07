@@ -43,19 +43,19 @@ export function CharacterCard({
   // sunoTrackId があればそれを使う、なければURLから抽出を試みる
   const trackId = sunoTrackId || (sunoUrl ? extractSunoTrackId(sunoUrl) : null);
 
-  // このカードが現在再生中かどうか
-  const isCurrentlyPlaying = state.currentTrack?.trackId === trackId && state.isPlaying;
+  // このカードが現在プレーヤーに表示されているかどうか
+  const isCurrentTrack = state.currentTrack?.trackId === trackId;
   const isCalm = state.motionMode === "calm";
 
   const handlePlayClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!trackId) return;
 
-    if (isCurrentlyPlaying) {
-      // 再生中なら停止
+    if (isCurrentTrack) {
+      // 同じ曲ならプレーヤーを閉じる
       stop();
     } else {
-      // 他のトラックを停止してこのトラックを再生
+      // 別の曲を再生
       play({ trackId, name, imageUrl });
     }
   };
@@ -103,7 +103,7 @@ export function CharacterCard({
     <div
       className={clsx(
         "group relative bg-white dark:bg-zinc-900 rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300",
-        isCurrentlyPlaying && "ring-2 ring-amber-500 shadow-amber-500/20"
+        isCurrentTrack && "ring-2 ring-amber-500 shadow-amber-500/20"
       )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -132,12 +132,12 @@ export function CharacterCard({
             onClick={handlePlayClick}
             className={clsx(
               "absolute top-3 left-3 p-2 rounded-full transition-all duration-200",
-              isCurrentlyPlaying
+              isCurrentTrack
                 ? clsx("bg-amber-500 text-white", !isCalm && "animate-pulse")
                 : "bg-white/90 text-zinc-900 hover:bg-white"
             )}
           >
-            {isCurrentlyPlaying ? <Pause size={16} /> : <Play size={16} />}
+            {isCurrentTrack ? <Pause size={16} /> : <Play size={16} />}
           </button>
         )}
 
