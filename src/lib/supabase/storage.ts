@@ -9,6 +9,8 @@ export async function uploadImageBlob(blob: Blob, userId: string): Promise<strin
   try {
     const fileName = `${userId}/${Date.now()}.webp`;
 
+    console.log('Uploading file:', fileName, 'size:', blob.size);
+
     const { data, error } = await supabase.storage
       .from('images')
       .upload(fileName, blob, {
@@ -22,10 +24,22 @@ export async function uploadImageBlob(blob: Blob, userId: string): Promise<strin
       return null;
     }
 
-    // 公開URLを取得
+    console.log('Upload response data:', data);
+
+    // data.path からバケット名を除去（含まれている場合）
+    const filePath = data.path.startsWith('images/')
+      ? data.path.replace('images/', '')
+      : data.path;
+
+    // 公開URLを取得（fileNameを直接使用）
     const { data: { publicUrl } } = supabase.storage
       .from('images')
-      .getPublicUrl(data.path);
+      .getPublicUrl(filePath);
+
+    console.log('Generated public URL:', publicUrl);
+
+    // URLが正しいか検証（開発用）
+    console.log('Expected path in URL:', fileName);
 
     return publicUrl;
   } catch (err) {
