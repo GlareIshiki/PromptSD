@@ -93,6 +93,10 @@ export async function getPublicCharacters(options?: {
     return [];
   }
 
+  console.log("Fetched characters:", data);
+  console.log("First character assets:", data?.[0]?.assets);
+  console.log("First character music:", data?.[0]?.music);
+
   return data as unknown as CharacterWithAssets[];
 }
 
