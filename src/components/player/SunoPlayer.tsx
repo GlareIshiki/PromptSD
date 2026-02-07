@@ -13,9 +13,9 @@ interface SunoPlayerProps {
 
 // Suno URLからトラックIDを抽出
 function extractSunoTrackId(url: string): string | null {
-  // https://suno.com/song/xxxxx or https://suno.ai/song/xxxxx
-  const match = url.match(/suno\.(com|ai)\/song\/([a-zA-Z0-9-]+)/);
-  return match ? match[2] : null;
+  // https://suno.com/song/xxxxx or https://suno.com/s/xxxxx に対応
+  const match = url.match(/suno\.(com|ai)\/(song|s)\/([a-zA-Z0-9-]+)/);
+  return match ? match[3] : null;
 }
 
 export function SunoPlayer({

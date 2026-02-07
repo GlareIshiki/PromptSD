@@ -19,8 +19,9 @@ interface CharacterCardProps {
 
 // Suno URLからトラックIDを抽出
 function extractSunoTrackId(url: string): string | null {
-  const match = url.match(/suno\.(com|ai)\/song\/([a-zA-Z0-9-]+)/);
-  return match ? match[2] : null;
+  // /song/ または /s/ パターンに対応
+  const match = url.match(/suno\.(com|ai)\/(song|s)\/([a-zA-Z0-9-]+)/);
+  return match ? match[3] : null;
 }
 
 export function CharacterCard({
